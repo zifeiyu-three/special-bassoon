@@ -1,0 +1,1845 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<windows.h>
+#include <limits.h>
+#define N 510
+// ANSI转义序列定义颜色和样式
+#define RESET   "\033[0m"
+#define BLACK   "\033[30m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define YELLOW  "\033[33m"
+#define BLUE    "\033[34m"
+#define MAGENTA "\033[35m"
+#define CYAN    "\033[36m"
+#define WHITE   "\033[37m"
+#define BOLD    "\033[1m"
+
+//初始化数据
+//用户类结构体；
+typedef struct User {
+    char name[100];//名字 
+    char code[100];//密码
+    char genter;//性别 
+    int age;//年龄 
+    char grade[50];//年级 
+    int jieyue;//借阅次数；
+}user;
+//书籍类结构体
+typedef struct Book {
+    int num;//数量 
+    char  name[50];//名字 
+    char write[50];
+    char id;//id 
+    int op;//用来标记所在的书柜
+    int beijie;//被借读的次数；
+    int day;//处理借阅记录中的天数
+    int days[100];//续借的映射；
+    user cd[100];//借阅的人；
+}book;
+//借阅请求处理结构体
+typedef struct Request {
+    user reuser[1000];
+    book rebook[1000];
+}requset;
+requset rr;
+typedef struct ActiveUser {//用户借阅记录结构体 
+    user u;
+    int borrow_count;
+} active_user;
+// 二叉树节点结构体，用于按书柜分类图书
+typedef struct TreeNode {
+    int bookcaseNum;  // 图书所在书柜编号
+    struct TreeNode* left;
+    struct TreeNode* right;
+} TreeNode;
+
+book bb[2000];
+user uu[2000];
+int cnt;
+// 存储图的边信息
+int g[N][N];
+// 存储1号点到每个点的最短距离
+int dist[N];
+// 标记每个点的最短距离是否已确定
+int st[N];
+// 存储每个点在最短路径上的前驱节点
+int pre[N];
+// 存储从1号点到各个点的最短路程（用于后续输出展示）
+int ans[N];
+int m, n;
+void bookadd() {
+    // 给《围城》赋值
+    strcpy(bb[0].name, "围城");
+    strcpy(bb[0].write, "钱钟书");
+    bb[0].id = 1;
+    bb[0].num = 5;
+    bb[0].op = 1;
+
+    // 给《红楼梦》赋值
+    strcpy(bb[1].name, "红楼梦");
+    strcpy(bb[1].write, "曹雪芹");
+    bb[1].id = 2;
+    bb[1].num = 3;
+    bb[1].op = 2;
+
+    // 给《三国演义》赋值
+    strcpy(bb[2].name, "三国演义");
+    strcpy(bb[2].write, "罗贯中");
+    bb[2].id = 3;
+    bb[2].num = 4;
+    bb[2].op = 3;
+
+    // 给《水浒传》赋值
+    strcpy(bb[3].name, "水浒传");
+    strcpy(bb[3].write, "施耐庵");
+    bb[3].id = 4;
+    bb[3].num = 4;
+    bb[3].op = 4;
+
+    // 给《西游记》赋值
+    strcpy(bb[4].name, "西游记");
+    strcpy(bb[4].write, "吴承恩");
+    bb[4].id = 5;
+    bb[4].num = 5;
+    bb[4].op = 5;
+
+    // 给《百年孤独》赋值
+    strcpy(bb[5].name, "百年孤独");
+    strcpy(bb[5].write, "加布里埃尔·加西亚·马尔克斯");
+    bb[5].id = 6;
+    bb[5].num = 2;
+    bb[5].op = 6;
+
+    // 给《悲惨世界》赋值
+    strcpy(bb[6].name, "悲惨世界");
+    strcpy(bb[6].write, "维克多·雨果");
+    bb[6].id = 7;
+    bb[6].num = 3;
+    bb[6].op = 7;
+
+    // 给《傲慢与偏见》赋值
+    strcpy(bb[7].name, "傲慢与偏见");
+    strcpy(bb[7].write, "简·奥斯汀");
+    bb[7].id = 8;
+    bb[7].num = 4;
+    bb[7].op = 8;
+
+    // 给《战争与和平》赋值
+    strcpy(bb[8].name, "战争与和平");
+    strcpy(bb[8].write, "列夫·托尔斯泰");
+    bb[8].id = 9;
+    bb[8].num = 2;
+    bb[8].op = 9;
+
+    // 给《追风筝的人》赋值
+    strcpy(bb[9].name, "追风筝的人");
+    strcpy(bb[9].write, "卡勒德·胡赛尼");
+    bb[9].id = 10;
+    bb[9].num = 3;
+    bb[9].op = 10;
+
+    // 给《杀死一只知更鸟》赋值
+    strcpy(bb[10].name, "杀死一只知更鸟");
+    strcpy(bb[10].write, "哈珀·李");
+    bb[10].id = 11;
+    bb[10].num = 2;
+    bb[10].op = 1;
+
+    // 给《1984》赋值
+    strcpy(bb[11].name, "1984");
+    strcpy(bb[11].write, "乔治·奥威尔");
+    bb[11].id = 12;
+    bb[11].num = 3;
+    bb[11].op = 2;
+
+    // 给《麦田里的守望者》赋值
+    strcpy(bb[12].name, "麦田里的守望者");
+    strcpy(bb[12].write, "J.D.萨林格");
+    bb[12].id = 13;
+    bb[12].num = 4;
+    bb[12].op = 3;
+
+    // 给《了不起的盖茨比》赋值
+    strcpy(bb[13].name, "了不起的盖茨比");
+    strcpy(bb[13].write, "斯科特·菲茨杰拉德");
+    bb[13].id = 14;
+    bb[13].num = 3;
+    bb[13].op = 4;
+
+    // 给《人类简史》赋值
+    strcpy(bb[14].name, "人类简史");
+    strcpy(bb[14].write, "尤瓦尔·赫拉利");
+    bb[14].id = 15;
+    bb[14].num = 2;
+    bb[14].op = 5;
+
+    // 给《小王子》赋值
+    strcpy(bb[15].name, "小王子");
+    strcpy(bb[15].write, "安托万·德·圣-埃克苏佩里");
+    bb[15].id = 16;
+    bb[15].num = 5;
+    bb[15].op = 6;
+
+    // 给《骆驼祥子》赋值
+    strcpy(bb[16].name, "骆驼祥子");
+    strcpy(bb[16].write, "老舍");
+    bb[16].id = 17;
+    bb[16].num = 3;
+    bb[16].op = 7;
+
+    // 给《安娜·卡列尼娜》赋值
+    strcpy(bb[17].name, "安娜·卡列尼娜");
+    strcpy(bb[17].write, "列夫·托尔斯泰");
+    bb[17].id = 18;
+    bb[17].num = 2;
+    bb[17].op = 8;
+
+    // 给《荆棘鸟》赋值
+    strcpy(bb[18].name, "荆棘鸟");
+    strcpy(bb[18].write, "科琳·麦卡洛");
+    bb[18].id = 19;
+    bb[18].num = 2;
+    bb[18].op = 9;
+
+    // 给《飘》赋值
+    strcpy(bb[19].name, "飘");
+    strcpy(bb[19].write, "玛格丽特·米切尔");
+    bb[19].id = 20;
+    bb[19].num = 3;
+    bb[19].op = 10;
+
+    // 给《活着》赋值
+    strcpy(bb[20].name, "活着");
+    strcpy(bb[20].write, "余华");
+    bb[20].id = 21;
+    bb[20].num = 4;
+    bb[20].op = 1;
+
+    // 给《苏菲的世界》赋值
+    strcpy(bb[21].name, "苏菲的世界");
+    strcpy(bb[21].write, "乔斯坦·贾德");
+    bb[21].id = 22;
+    bb[21].num = 3;
+    bb[21].op = 2;
+
+    // 给《存在与虚无》赋值
+    strcpy(bb[22].name, "存在与虚无");
+    strcpy(bb[22].write, "让-保罗·萨特");
+    bb[22].id = 23;
+    bb[22].num = 2;
+    bb[22].op = 3;
+
+    // 给《明朝那些事儿》赋值
+    strcpy(bb[23].name, "明朝那些事儿");
+    strcpy(bb[23].write, "当年明月");
+    bb[23].id = 24;
+    bb[23].num = 5;
+    bb[23].op = 4;
+
+    // 给《月亮和六便士》赋值
+    strcpy(bb[24].name, "月亮和六便士");
+    strcpy(bb[24].write, "毛姆");
+    bb[24].id = 25;
+    bb[24].num = 3;
+    bb[24].op = 5;
+
+    // 给《晚清最后十八年》赋值
+    strcpy(bb[25].name, "晚清最后十八年");
+    strcpy(bb[25].write, "黄治军");
+    bb[25].id = 26;
+    bb[25].num = 4;
+    bb[25].op = 6;
+
+    // 给《苏东坡传》赋值
+    strcpy(bb[26].name, "苏东坡传");
+    strcpy(bb[26].write, "林语堂");
+    bb[26].id = 27;
+    bb[26].num = 3;
+    bb[26].op = 7;
+
+    // 给《李白传》赋值
+    strcpy(bb[27].name, "李白传");
+    strcpy(bb[27].write, "李长之");
+    bb[27].id = 28;
+    bb[27].num = 2;
+    bb[27].op = 1;
+
+    // 给《三体全集》赋值
+    strcpy(bb[28].name, "三体全集");
+    strcpy(bb[28].write, "刘慈欣");
+    bb[28].id = 29;
+    bb[28].num = 3;
+    bb[28].op = 2;
+
+    // 给《上帝掷骰子吗》赋值
+    strcpy(bb[29].name, "上帝掷骰子吗");
+    strcpy(bb[29].write, "曹天元");
+    bb[29].id = 30;
+    bb[29].num = 2;
+    bb[29].op = 3;
+
+    // 给《乡土中国》赋值
+    strcpy(bb[30].name, "乡土中国");
+    strcpy(bb[30].write, "费孝通");
+    bb[30].id = 31;
+    bb[30].num = 3;
+    bb[30].op = 4;
+
+    // 给《巴黎圣母院》赋值
+    strcpy(bb[31].name, "巴黎圣母院");
+    strcpy(bb[31].write, "维克多·雨果");
+    bb[31].id = 32;
+    bb[31].num = 2;
+    bb[31].op = 5;
+
+    // 给《呼啸山庄》赋值
+    strcpy(bb[32].name, "呼啸山庄");
+    strcpy(bb[32].write, "艾米莉·勃朗特");
+    bb[32].id = 33;
+    bb[32].num = 3;
+    bb[32].op = 6;
+
+    // 给《红与黑》赋值
+    strcpy(bb[33].name, "红与黑");
+    strcpy(bb[33].write, "司汤达");
+    bb[33].id = 34;
+    bb[33].num = 2;
+    bb[33].op = 7;
+
+    // 给《鲁宾逊漂流记》赋值
+    strcpy(bb[34].name, "鲁宾逊漂流记");
+    strcpy(bb[34].write, "笛福");
+    bb[34].id = 35;
+    bb[34].num = 3;
+    bb[34].op = 8;
+
+    // 给《文学理论教程(第五版)》赋值
+    strcpy(bb[35].name, "文学理论教程(第五版)");
+    strcpy(bb[35].write, "童庆炳");
+    bb[35].id = 36;
+    bb[35].num = 2;
+    bb[35].op = 9;
+
+    // 给《创造难忘的人物》赋值
+    strcpy(bb[36].name, "创造难忘的人物");
+    strcpy(bb[36].write, "琳达·西格");
+    bb[36].id = 37;
+    bb[36].num = 2;
+    bb[36].op = 10;
+
+    // 给《黑铁时代》赋值
+    strcpy(bb[37].name, "黑铁时代");
+    strcpy(bb[37].write, "王小波");
+    bb[37].id = 38;
+    bb[37].num = 2;
+    bb[37].op = 1;
+
+    // 给《短视频运营一本通》赋值
+    strcpy(bb[38].name, "短视频运营一本通");
+    strcpy(bb[38].write, "陈永东");
+    bb[38].id = 39;
+    bb[38].num = 2;
+    bb[38].op = 2;
+
+    // 给《美食佳肴的传说》赋值
+    strcpy(bb[39].name, "美食佳肴的传说");
+    strcpy(bb[39].write, "佚名");
+    bb[39].id = 40;
+    bb[39].num = 2;
+    bb[39].op = 3;
+
+    // 给《百年孤独》赋值
+    strcpy(bb[40].name, "百年孤独");
+    strcpy(bb[40].write, "加西亚·马尔克斯");
+    bb[40].id = 41;
+    bb[40].num = 3;
+    bb[40].op = 4;
+
+    // 《平凡的世界》
+    strcpy(bb[41].name, "平凡的世界");
+    strcpy(bb[41].write, "路遥");
+    bb[41].id = 42;
+    bb[41].num = 4;
+    bb[41].op = 5;
+
+    // 《活着》
+    strcpy(bb[42].name, "活着");
+    strcpy(bb[42].write, "余华");
+    bb[42].id = 43;
+    bb[42].num = 5;
+    bb[42].op = 6;
+
+    // 《呐喊》
+    strcpy(bb[43].name, "呐喊");
+    strcpy(bb[43].write, "鲁迅");
+    bb[43].id = 44;
+    bb[43].num = 3;
+    bb[43].op = 7;
+
+    // 《彷徨》
+    strcpy(bb[44].name, "彷徨");
+    strcpy(bb[44].write, "鲁迅");
+    bb[44].id = 45;
+    bb[44].num = 2;
+    bb[44].op = 8;
+
+    // 《狂人日记》
+    strcpy(bb[45].name, "狂人日记");
+    strcpy(bb[45].write, "鲁迅");
+    bb[45].id = 46;
+    bb[45].num = 2;
+    bb[45].op = 9;
+
+    // 《骆驼祥子》
+    strcpy(bb[46].name, "骆驼祥子");
+    strcpy(bb[46].write, "老舍");
+    bb[46].id = 47;
+    bb[46].num = 4;
+    bb[46].op = 10;
+
+
+    // 《四世同堂》
+    strcpy(bb[47].name, "四世同堂");
+    strcpy(bb[47].write, "老舍");
+    bb[47].id = 48;
+    bb[47].num = 3;
+    bb[47].op = 1;
+
+    // 《雷雨》
+    strcpy(bb[48].name, "雷雨");
+    strcpy(bb[48].write, "曹禺");
+    bb[48].id = 49;
+    bb[48].num = 2;
+    bb[48].op = 2;
+
+    // 《日出》
+    strcpy(bb[49].name, "日出");
+    strcpy(bb[49].write, "曹禺");
+    bb[49].id = 50;
+    bb[49].num = 2;
+    bb[49].op = 3;
+
+    // 《茶馆》
+    strcpy(bb[50].name, "茶馆");
+    strcpy(bb[50].write, "老舍");
+    bb[50].id = 51;
+    bb[50].num = 3;
+    bb[50].op = 4;
+
+    // 《边城》
+    strcpy(bb[51].name, "边城");
+    strcpy(bb[51].write, "沈从文");
+    bb[51].id = 52;
+    bb[51].num = 3;
+    bb[51].op = 5;
+
+    // 《围城》
+    strcpy(bb[52].name, "围城");
+    strcpy(bb[52].write, "钱钟书");
+    bb[52].id = 53;
+    bb[52].num = 2;
+    bb[52].op = 6;
+
+    // 《京华烟云》
+    strcpy(bb[53].name, "京华烟云");
+    strcpy(bb[53].write, "林语堂");
+    bb[53].id = 54;
+    bb[53].num = 3;
+    bb[53].op = 7;
+
+    // 《文化苦旅》
+    strcpy(bb[54].name, "文化苦旅");
+    strcpy(bb[54].write, "余秋雨");
+    bb[54].id = 55;
+    bb[54].num = 2;
+    bb[54].op = 8;
+
+    // 《山居笔记》
+    strcpy(bb[55].name, "山居笔记");
+    strcpy(bb[55].write, "余秋雨");
+    bb[55].id = 56;
+    bb[55].num = 2;
+    bb[55].op = 9;
+
+    // 《背影》
+    strcpy(bb[56].name, "背影");
+    strcpy(bb[56].write, "朱自清");
+    bb[56].id = 57;
+    bb[56].num = 2;
+    bb[56].op = 10;
+
+    // 《荷塘月色》
+    strcpy(bb[57].name, "荷塘月色");
+    strcpy(bb[57].write, "朱自清");
+    bb[57].id = 58;
+    bb[57].num = 2;
+    bb[57].op = 1;
+
+    // 《繁星·春水》
+    strcpy(bb[58].name, "繁星·春水");
+    strcpy(bb[58].write, "冰心");
+    bb[58].id = 59;
+    bb[58].num = 2;
+    bb[58].op = 2;
+
+    // 《寄小读者》
+    strcpy(bb[59].name, "寄小读者");
+    strcpy(bb[59].write, "冰心");
+    bb[59].id = 60;
+    bb[59].num = 2;
+    bb[59].op = 3;
+
+    // 《简·爱》
+    strcpy(bb[60].name, "简·爱");
+    strcpy(bb[60].write, "夏洛蒂·勃朗特");
+    bb[60].id = 61;
+    bb[60].num = 3;
+    bb[60].op = 4;
+
+    // 《呼啸山庄》
+    strcpy(bb[61].name, "呼啸山庄");
+    strcpy(bb[61].write, "艾米莉·勃朗特");
+    bb[61].id = 62;
+    bb[61].num = 2;
+    bb[61].op = 5;
+
+    // 《汤姆叔叔的小屋》
+    strcpy(bb[62].name, "汤姆叔叔的小屋");
+    strcpy(bb[62].write, "斯托夫人");
+    bb[62].id = 63;
+    bb[62].num = 4;
+    bb[62].op = 6;
+
+    // 《老人与海》
+    strcpy(bb[63].name, "老人与海");
+    strcpy(bb[63].write, "欧内斯特·海明威");
+    bb[63].id = 64;
+    bb[63].num = 3;
+    bb[63].op = 7;
+
+    // 《飘》
+    strcpy(bb[64].name, "飘");
+    strcpy(bb[64].write, "玛格丽特·米切尔");
+    bb[64].id = 65;
+    bb[64].num = 3;
+    bb[64].op = 8;
+
+    // 《瓦尔登湖》
+    strcpy(bb[65].name, "瓦尔登湖");
+    strcpy(bb[65].write, "亨利·戴维·梭罗");
+    bb[65].id = 66;
+    bb[65].num = 2;
+    bb[65].op = 9;
+
+    // 《了不起的盖茨比》
+    strcpy(bb[66].name, "了不起的盖茨比");
+    strcpy(bb[66].write, "斯科特·菲茨杰拉德");
+    bb[66].id = 67;
+    bb[66].num = 3;
+    bb[66].op = 10;
+
+    // 《永别了，武器》
+    strcpy(bb[67].name, "永别了，武器");
+    strcpy(bb[67].write, "欧内斯特·海明威");
+    bb[67].id = 68;
+    bb[67].num = 2;
+    bb[67].op = 1;
+
+    // 《愤怒的葡萄》
+    strcpy(bb[68].name, "愤怒的葡萄");
+    strcpy(bb[68].write, "约翰·斯坦贝克");
+    bb[68].id = 69;
+    bb[68].num = 3;
+    bb[68].op = 2;
+
+    // 《杀死一只知更鸟》
+    strcpy(bb[69].name, "杀死一只知更鸟");
+    strcpy(bb[69].write, "哈珀·李");
+    bb[69].id = 70;
+    bb[69].num = 2;
+    bb[69].op = 3;
+
+    // 《麦田里的守望者》
+    strcpy(bb[70].name, "麦田里的守望者");
+    strcpy(bb[70].write, "杰罗姆·大卫·塞林格");
+    bb[70].id = 71;
+    bb[70].num = 3;
+    bb[70].op = 4;
+
+    // 《动物农场》
+    strcpy(bb[71].name, "动物农场");
+    strcpy(bb[71].write, "乔治·奥威尔");
+    bb[71].id = 72;
+    bb[71].num = 2;
+    bb[71].op = 5;
+
+    // 《1984》
+    strcpy(bb[72].name, "1984");
+    strcpy(bb[72].write, "乔治·奥威尔");
+    bb[72].id = 73;
+    bb[72].num = 3;
+    bb[72].op = 6;
+
+    // 《时间简史》
+    strcpy(bb[73].name, "时间简史");
+    strcpy(bb[73].write, "斯蒂芬·霍金");
+    bb[73].id = 74;
+    bb[73].num = 2;
+    bb[73].op = 7;
+
+    // 《人类简史》
+    strcpy(bb[74].name, "人类简史");
+    strcpy(bb[74].write, "尤瓦尔·赫拉利");
+    bb[74].id = 75;
+    bb[74].num = 2;
+    bb[74].op = 1;
+
+    // 《未来简史》
+    strcpy(bb[75].name, "未来简史");
+    strcpy(bb[75].write, "尤瓦尔·赫拉利");
+    bb[75].id = 76;
+    bb[75].num = 2;
+    bb[75].op = 2;
+
+    // 《三体·黑暗森林》
+    strcpy(bb[76].name, "三体·黑暗森林");
+    strcpy(bb[76].write, "刘慈欣");
+    bb[76].id = 77;
+    bb[76].num = 3;
+    bb[76].op = 3;
+
+    // 《三体·死神永生》
+    strcpy(bb[77].name, "三体·死神永生");
+    strcpy(bb[77].write, "刘慈欣");
+    bb[77].id = 78;
+    bb[77].num = 3;
+    bb[77].op = 4;
+
+    // 《青铜时代》
+    strcpy(bb[78].name, "青铜时代");
+    strcpy(bb[78].write, "王小波");
+    bb[78].id = 79;
+    bb[78].num = 2;
+    bb[78].op = 5;
+
+    // 《白银时代》
+    strcpy(bb[79].name, "白银时代");
+    strcpy(bb[79].write, "王小波");
+    bb[79].id = 80;
+    bb[79].num = 2;
+    bb[79].op = 6;
+
+    // 《黄金时代》
+    strcpy(bb[80].name, "黄金时代");
+    strcpy(bb[80].write, "王小波");
+    bb[80].id = 81;
+    bb[80].num = 2;
+    bb[80].op = 7;
+
+    // 《追风筝的人》
+    strcpy(bb[81].name, "追风筝的人");
+    strcpy(bb[81].write, "卡勒德·胡赛尼");
+    bb[81].id = 82;
+    bb[81].num = 3;
+    bb[81].op = 8;
+
+    // 《灿烂千阳》
+    strcpy(bb[82].name, "灿烂千阳");
+    strcpy(bb[82].write, "卡勒德·胡赛尼");
+    bb[82].id = 83;
+    bb[82].num = 2;
+    bb[82].op = 9;
+
+    // 《你当像鸟飞往你的山》
+    strcpy(bb[83].name, "你当像鸟飞往你的山");
+    strcpy(bb[83].write, "塔拉·韦斯特弗");
+    bb[83].id = 84;
+    bb[83].num = 2;
+    bb[83].op = 10;
+
+    // 《无声告白》
+    strcpy(bb[84].name, "无声告白");
+    strcpy(bb[84].write, "伍绮诗");
+    bb[84].id = 85;
+    bb[84].num = 2;
+    bb[84].op = 1;
+
+    // 《房思琪的初恋乐园》
+    strcpy(bb[85].name, "房思琪的初恋乐园");
+    strcpy(bb[85].write, "林奕含");
+    bb[85].id = 86;
+    bb[85].num = 2;
+    bb[85].op = 2;
+
+    // 《海边的卡夫卡》
+    strcpy(bb[86].name, "海边的卡夫卡");
+    strcpy(bb[86].write, "村上春树");
+    bb[86].id = 87;
+    bb[86].num = 2;
+    bb[86].op = 3;
+
+    // 《挪威的森林》
+    strcpy(bb[87].name, "挪威的森林");
+    strcpy(bb[87].write, "村上春树");
+    bb[87].id = 88;
+    bb[87].num = 3;
+    bb[87].op = 4;
+
+    // 《且听风吟》
+    strcpy(bb[88].name, "且听风吟");
+    strcpy(bb[88].write, "村上春树");
+    bb[88].id = 89;
+    bb[88].num = 2;
+    bb[88].op = 5;
+
+    // 《雪国》
+    strcpy(bb[89].name, "雪国");
+    strcpy(bb[89].write, "川端康成");
+    bb[89].id = 90;
+    bb[89].num = 2;
+    bb[89].op = 6;
+
+    // 《古都》
+    strcpy(bb[90].name, "古都");
+    strcpy(bb[90].write, "川端康成");
+    bb[90].id = 91;
+    bb[90].num = 2;
+    bb[90].op = 7;
+
+    // 《千只鹤》
+    strcpy(bb[91].name, "千只鹤");
+    strcpy(bb[91].write, "川端康成");
+    bb[91].id = 92;
+    bb[91].num = 2;
+    bb[91].op = 8;
+
+    // 《解忧杂货店》
+    strcpy(bb[92].name, "解忧杂货店");
+    strcpy(bb[92].write, "东野圭吾");
+    bb[92].id = 93;
+    bb[92].num = 3;
+    bb[92].op = 9;
+
+    // 《白夜行》
+    strcpy(bb[93].name, "白夜行");
+    strcpy(bb[93].write, "东野圭吾");
+    bb[93].id = 94;
+    bb[93].num = 3;
+    bb[93].op = 10;
+
+    // 《嫌疑人 X 的献身》
+    strcpy(bb[94].name, "嫌疑人 X 的献身");
+    strcpy(bb[94].write, "东野圭吾");
+    bb[94].id = 95;
+    bb[94].num = 2;
+    bb[94].op = 1;
+
+    // 《恶意》
+    strcpy(bb[95].name, "恶意");
+    strcpy(bb[95].write, "东野圭吾");
+    bb[95].id = 96;
+    bb[95].num = 2;
+    bb[95].op = 2;
+
+    // 《蛙》
+    strcpy(bb[96].name, "蛙");
+    strcpy(bb[96].write, "莫言");
+    bb[96].id = 97;
+    bb[96].num = 2;
+    bb[96].op = 3;
+
+    // 《丰乳肥臀》
+    strcpy(bb[97].name, "丰乳肥臀");
+    strcpy(bb[97].write, "莫言");
+    bb[97].id = 98;
+    bb[97].num = 2;
+    bb[97].op = 4;
+
+    // 《红高粱家族》
+    strcpy(bb[98].name, "红高粱家族");
+    strcpy(bb[98].write, "莫言");
+    bb[98].id = 99;
+    bb[98].num = 2;
+    bb[98].op = 5;
+
+    // 《檀香刑》
+    strcpy(bb[99].name, "檀香刑");
+    strcpy(bb[99].write, "莫言");
+    bb[99].id = 100;
+    bb[99].num = 2;
+    bb[99].op = 6;
+}
+
+//界面函数的声明
+void Start_Menu();//开始界面 
+void Simple_start_Menu();//普通用户界面
+void Manager_start_Menu();//管理员用户界面
+void Start_Value_Menu();//初始化的界面
+void Simple_Book_Menu(user add);//用户界面
+void Manage_Book_Menu();//管理员界面
+void Simple_User_Menu();//普通用户界面
+void Book_Guide_Map();//导航
+void inti();//图的绘制
+void Book_start_Guide();//导航界面的初始化
+void Book_printPath(int x);//打印路径
+
+
+
+//书籍的声明实现
+void Lend_Book();//借书；
+void Find_Book();//找书；
+void Create_Book();//创建书籍
+void Bowse_Book();//浏览书籍
+void Turn_Back();//归还书籍
+void Lend_Book(user rent);//借书
+void Remove_Book();//删除书籍；
+void Recommend_Book();//推荐图书
+void Book_State();//图书状态；
+int  Find_Book_ip(int ip);//图书柜找寻；
+void Book_Count();//图书个数；
+void Book_Borrow_Request();//图书借阅请求；
+void Book_Solve_Request();//图书请求解决；
+int Find_Max_Borrowed();//找到最多借阅的图书 
+void Show_Most_Borrowed_Book();//借阅最多的图书；
+// 构建二叉树函数，以图书所在书柜编号构建二叉排序树
+TreeNode* buildBinaryTree(book* books, int numBooks) {
+    TreeNode* root = NULL;
+    for (int i = 0; i < numBooks; i++) {
+        if (books[i].name[0] != '\0') {  // 确保书籍信息有效
+            TreeNode* newNode = (TreeNode*)malloc(sizeof(TreeNode));
+            newNode->bookcaseNum = books[i].op;
+            newNode->left = newNode->right = NULL;
+
+            if (root == NULL) {
+                root = newNode;
+            }
+            else {
+                TreeNode* current = root;
+                while (1) {
+                    if (newNode->bookcaseNum < current->bookcaseNum) {
+                        if (current->left == NULL) {
+                            current->left = newNode;
+                            break;
+                        }
+                        current = current->left;
+                    }
+                    else {
+                        if (current->right == NULL) {
+                            current->right = newNode;
+                            break;
+                        }
+                        current = current->right;
+                    }
+                }
+            }
+        }
+    }
+    return root;
+}
+// 中序遍历二叉树展示书柜分类图书
+void inorderTraversal(TreeNode* root, book* books) {
+    if (root != NULL) {
+        inorderTraversal(root->left, books);
+        printf("书柜编号: %d 包含的图书如下:\n", root->bookcaseNum);
+        for (int i = 0; i < 2000; i++) {
+            if (books[i].name[0] != '\0' && books[i].op == root->bookcaseNum) {
+                printf(" - %s\n", books[i].name);
+            }
+        }
+        inorderTraversal(root->right, books);
+    }
+}
+
+//程序实行的声明
+void System_Back();//判断返回；
+void solve();
+void Flag();//判断程序进程；
+
+//用户方法的声明
+void Creat_User();//创建用户
+void Find_User();//寻找用户
+void Remove_User();//删除用户
+int compare_active_user(const void* a, const void* b);//用户借阅的比较 
+void Show_Most_Active_User();//最活跃的用户 
+
+
+//界面绘制
+void Manager_start_Menu()//管理员界面
+{
+    char* envWidth = getenv("COLUMNS");
+    int screenWidth = envWidth != NULL ? atoi(envWidth) : 80;
+    int menuWidth = 38;
+    int leftPadding = (screenWidth - menuWidth) / 2;
+
+    printf("%*s\n", (screenWidth - 12) / 2, "\t             --------------------------------------");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                          图书管理系统");
+    printf("\n");
+
+
+    // 菜单项
+    printf("%*s│ 1.创建用户                         │\n", leftPadding, "");
+    printf("%*s│ 2.删除用户                         │\n", leftPadding, "");
+    printf("%*s│ 3.查找用户                         │\n", leftPadding, "");
+    printf("%*s│ 4.添加书籍                         │\n", leftPadding, "");
+    printf("%*s│ 5.查找书籍                         │\n", leftPadding, "");
+    printf("%*s│ 6.删除书籍                         │\n", leftPadding, "");
+    printf("%*s│ 7.浏览书籍                         │\n", leftPadding, "");
+    printf("%*s│ 8.书籍排序                         │\n", leftPadding, "");
+    printf("%*s│ 9.书籍情况查询                     │\n", leftPadding, "");
+    printf("%*s│ 10.可视化图书借阅量                │\n", leftPadding, "");
+    printf("%*s│ 11.图书种类数量                    │\n", leftPadding, "");
+    printf("%*s│ 12.借阅请求的处理                  │\n", leftPadding, "");
+    printf("%*s│ 13.展示借阅量最大的图书            │\n", leftPadding, "");
+    printf("%*s│ 14.展示最活跃的用户                │\n", leftPadding, "");
+    printf("%*s│ 15.返回                            │\n", leftPadding, "");
+    printf("%*s│ 16.退出系统                        │\n", leftPadding, "");
+
+
+
+}
+void Simple_start_Menu()//普通用户的功能
+{
+    char* envWidth = getenv("COLUMNS");
+    int screenWidth = envWidth != NULL ? atoi(envWidth) : 80;
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                               ---------------------------------------");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              图书管理系统");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              1.查找书籍");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              2.借阅书籍");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              3.归还书籍");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              4.推荐书籍");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              5.图书馆导航和布局");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              6.返回");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              7.按书柜分类展示图书");
+}
+
+void Start_Value_Menu() //初始化的界面
+{
+    printf("-------------------------------------------------1.0图书管理系统---------------------------------------------------\n");
+    printf("                                                    登陆\n");
+    printf("                                                 1.用户登陆\n");
+    printf("                                                 2.管理员登陆\n");
+    printf("                                                 3.退出\n");
+    printf("                                                 请输入你的选择：");
+}
+void Book_start_Guide() {
+    char* envWidth = getenv("COLUMNS");
+    int screenWidth = envWidth != NULL ? atoi(envWidth) : 80;
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              导航系统");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              1.书柜导航");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              2.书名导航");
+    printf("%*s\n", (screenWidth - 12) / 2, "\t                                              3.返回");
+}
+
+
+//程序进程中断；
+void Flag() // 判断程序进程；
+{
+    printf("输入任意键继续，输入Q/q退出系统：");
+    char ch;
+    scanf("%c", &ch);
+    if (ch == 'Q' || ch == 'q') // 检查是否按下Esc键
+    {
+        exit(0); // 如果按下Esc键，则退出程序
+    }
+    system("cls");
+    return; // 返回到调用函数的地方
+}
+void inti()//图的绘制
+{
+    for (int i = 0; i < 1000; i++) {
+        strcpy(rr.reuser[i].name, ""); // 清空用户信息
+    }
+    n = 10;  // 假设有10个点
+    m = 20;  // 20条边
+    // 初始化图的边信息数组为最大整数
+    memset(g, 0x3f, sizeof(g));
+    // 初始化20条边的示例
+    g[1][2] = 2;
+    g[1][3] = 4;
+    g[1][4] = 3;
+    g[2][5] = 5;
+    g[2][6] = 1;
+    g[3][7] = 2;
+    g[3][8] = 6;
+    g[4][9] = 3;
+    g[4][10] = 4;
+    g[5][6] = 2;
+    g[5][7] = 3;
+    g[6][8] = 1;
+    g[6][9] = 4;
+    g[7][10] = 2;
+    g[8][2] = 3;
+    g[8][3] = 1;
+    g[9][5] = 2;
+    g[9][6] = 3;
+    g[10][7] = 1;
+    g[10][8] = 2;
+    // 初始化距离数组为最大整数，表示初始都不可达
+    for (int i = 0; i < N; i++) {
+        dist[i] = INT_MAX;
+    }
+    dist[1] = 0;
+    memset(pre, -1, sizeof(pre));  // 初始化前驱节点为 -1
+
+    for (int i = 0; i < n - 1; i++) {
+        int t = -1;
+        // 在未确定最短路的点中找距离最小的点
+        for (int j = 1; j <= n; j++) {
+            if (!st[j] && (t == -1 || dist[t] > dist[j])) {
+                t = j;
+            }
+        }
+
+        st[t] = 1;
+
+        // 用找到的点t更新其他点的距离，并记录前驱节点
+        for (int j = 1; j <= n; j++) {
+            if (dist[t] + g[t][j] < dist[j]) {
+                dist[j] = dist[t] + g[t][j];
+                pre[j] = t;  // 记录j点的前驱节点为t
+            }
+        }
+    }
+}
+
+
+//框架设计
+void gotoxy(int x, int y)//框型的绘制
+{
+    HANDLE hOut;
+    COORD pos = { x, y };
+    hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleCursorPosition(hOut, pos);
+}
+void paintWindow(int startX, int startY, int row, int col)//绘制窗口
+{
+    gotoxy(startX, startY);
+    printf("┏");
+    for (int i = 1; i <= col - 2; i++) printf("━");
+    printf("┓\n");
+    for (int i = 1; i <= row - 2; i++)
+    {
+        gotoxy(startX, startY + i);
+        printf("┃");
+        for (int j = 1; j <= col - 2; j++) printf(" ");
+        printf("┃\n");
+    }
+    gotoxy(startX, startY + row - 1);
+    printf("┗");
+    for (int i = 1; i <= col - 2; i++) printf("━");
+    printf("┛\n");
+}
+
+
+//book的方法类
+void Create_Book()//创建书籍
+{
+    int flag = 1;
+    book bbb;
+    printf("输入名字：");
+    scanf("%99s", bbb.name);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入作者：");
+    scanf("%99s", bbb.write);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入id：");
+    scanf("%c", &bbb.id);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入数量：");
+    scanf("%d", &bbb.num);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入书柜：");
+    scanf("%d", &bbb.op);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    for (int i = 0; i < 2000; i++) {
+        if (strcmp(bb[i].name, "") == 0) { // 假设空字符串表示空位
+            bb[i].id = bbb.id;
+            bb[i].num = bbb.num;
+            bb[i].op = bbb.op;
+            strcpy(bb[i].name, bbb.name);
+            strcpy(bb[i].write, bbb.write);
+            printf("书籍创建成功\n");
+            break;
+        }
+    }
+}
+void Remove_Book()//删除书籍
+{
+    char a[100];
+    printf("输入你要删除的书名：");
+    scanf("%s", a);
+    for (int i = 0; i < 2000; i++)
+    {
+        if ((strcmp(bb[i].name, a) == 0))
+        {
+            if (bb[i].num)
+            {
+                bb[i].num--;
+                printf("删除成功");
+            }
+            else
+                printf("此书缺货，等待还书或者补货");
+            break;
+
+        }
+
+    }
+}
+void Find_Book() // 寻找图书
+{
+    int flag = 0;
+    char dd[1000];
+    printf("输入你要查找的图书名称：");
+    scanf("%s", dd);
+    for (int i = 0; i < 2000; i++)
+    {
+        if ((strcmp(bb[i].name, dd) == 0))
+        {
+            flag = 1;
+            printf("图书名称：%s  图书作者：%s 图书的编号：%c  图书个数：%d  图书所在的书柜：%d\n", bb[i].name, bb[i].write, bb[i].id, bb[i].num, bb[i].op); // 图书的输出类
+        }
+    }
+    if (flag == 0) // 如果flag还是0，说明没有找到书籍
+    {
+        printf("查无此书\n");
+        // 没有找到书籍，也立即返回
+    }
+}
+void Bowse_Book() // 浏览书籍
+{
+    int idx = 1;
+    int flag = 1;
+    for (int i = 0; i < 2000; i++) // 假设 bb 数组的最大长度是 2000
+    {
+        if (strcmp(bb[i].name, "") != 0) // 检查书籍名称是否为空，以确定是否是有效书籍
+        {
+            printf("图书名称：%s  图书作者：%s  图书的编号：%c  图书个数：%d  图书所在的书柜：%d\n", bb[i].name, bb[i].write, bb[i].id, bb[i].num, bb[i].op); // 图书的输出
+            if (idx % 10 == 0)
+            {
+                printf("是否需要继续查询（y/n）:");
+                char op;
+                // 清除缓冲区中的换行符
+                while ((getchar()) != '\n');
+                scanf(" %c", &op); // 注意 %c 前的空格，它会跳过任何空白字符，包括换行符
+                if (op == 'y' || op == 'Y') // 允许用户输入大写或小写的 'y'
+                    flag = 1;
+                else
+                    flag = 0;
+            }
+            if (flag == 0)return;
+            idx++; // 递增书籍编号
+        }
+    }
+}
+void Recommend_Book()//推荐图书
+{
+    int idx = 0;
+    while (strcmp("", bb[idx].name) != 0)
+        idx++;
+    // 按照被借的次序排从大到小排序
+    for (int i = 0; i < 100; i++) {
+        for (int j = i + 1; j < 100; j++) {
+            if (bb[i].beijie < bb[j].beijie) {
+                book temp = bb[i];
+                bb[i] = bb[j];
+                bb[j] = temp;
+            }
+        }
+    }
+    // 输出排名前 k 的书籍信息和借阅次数
+    printf("借阅排行榜（前 %d）：\n", idx);
+    printf("编号\t书名\t作者\t借阅次数\n");
+    for (int i = 0; i < idx && i < 100; i++) {
+        printf("%c\t%s\t%s\t%d\n", bb[i].id, bb[i].name, bb[i].write, bb[i].beijie);
+    }
+}
+void Book_State() {
+    printf("请输入的书本情况：");
+    char ch[1000];
+    scanf("%s", ch);
+    for (int i = 0; i < 1000; i++) {
+        if (strcmp(bb[i].name, ch) == 0) {
+            printf("书名\t作者\t借阅人员\t借阅时间\n");
+            int found = 0;
+            for (int j = 0; j < 100; j++) {
+                if (strcmp(bb[i].cd[j].name, "") != 0) { // 检查借阅者姓名是否不为空
+                    printf("%s\t%s\t%s\t        %d\n", bb[i].name, bb[i].write, bb[i].cd[j].name, bb[i].days[j]);
+                    found = 1;
+                }
+            }
+            if (!found) {
+                printf("%s\t%s\t无\t        无\n", bb[i].name, bb[i].write);
+            }
+            return; // 找到书籍后立即返回
+        }
+    }
+    printf("未找到书籍\n");
+}
+void Lend_Book(user rent) {
+    //int op;
+    //scanf("%d", &op);
+    printf("请输入你要借阅的书籍：");
+    char bbb[1000];
+    int day;
+    scanf("%s", bbb);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("请输入借的时间：");
+    scanf("%d", &day);//借阅时长；
+    for (int i = 0; i < 2000; i++) {
+        if (strcmp(bb[i].name, bbb) == 0) {
+            //            if (bb[i].num > 0) {
+            //                printf("图书名称：%s  图书作者：%s 图书的编号：%c  图书个数：%d  图书所在的书柜：%d\n", bb[i].name, bb[i].write, bb[i].id, bb[i].num, bb[i].op); // 图书的输出类
+            //                bb[i].beijie++;
+            //                bb[i].num--;
+            //                int foundEmpty = 0;
+            //                for (int j = 0; j < 100; j++) {
+            //                    if (strcmp(bb[i].cd[j].name, "") == 0) { // 找到空的借阅者信息
+             //                       bb[i].cd[j] = rent; // 赋值为当前用户
+             //                       bb[i].days[j] += day;
+             //                       foundEmpty = 1;
+             //                       break;
+                            //    }
+                            //}
+                            //if (!foundEmpty) {
+                                //printf("借阅者列表已满，请等待空位\n");
+                            //}
+                            //else {
+             //                   printf("借阅成功\n");
+        }
+    }
+    //            else {
+    //                printf("此书已被借完，请等待还书\n");
+    //            }
+    //            return; // 找到书籍后立即返回
+    //        }
+        //}
+        //printf("未找到书籍\n");
+}
+void Turn_Back(user add) { // 归还操作
+    printf("请输入要归还的书：");
+    char ch[100];
+    scanf("%s", ch);
+    for (int i = 0; i < 1000; i++) {
+        if (strcmp(ch, bb[i].name) == 0) { // 找到书籍
+            for (int j = 0; j < 100; j++) {
+                if (strcmp(add.name, bb[i].cd[j].name) == 0) { // 找到借阅者
+                    bb[i].num++; // 增加书籍数量
+                    strcpy(bb[i].cd[j].name, ""); // 清空借阅者名字
+                    bb[i].days[j] = 0; // 重置借阅天数
+                    printf("归还成功\n");
+                    return;
+                }
+            }
+            printf("未找到借阅者记录\n");
+            return;
+        }
+    }
+    printf("归还失败，未找到书籍\n");
+}
+void Book_Count() {
+    cnt = 0;
+    for (int i = 0; i < 1000; i++)
+    {
+        if (strcmp(bb[i].name, "") != 0)
+            cnt++;
+    }
+    printf("当前图书共有%d种\n", cnt);
+}
+void Book_printPath(int x) {
+    if (x == 1) {
+        printf("1");
+        return;
+    }
+    Book_printPath(pre[x]);
+    printf("->%d", x);
+}
+void Book_Borrow_Request(user rent) { // 借阅图书请求
+    printf("请输入你要借阅的书籍：");
+    char bbb[1000];
+    scanf("%s", bbb);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("请输入借阅的时间：");
+    int day;
+    scanf("%d", &day); // 借阅时长；
+    for (int i = 0; i < 2000; i++) {
+        if (strcmp(bb[i].name, bbb) == 0) {
+            if (bb[i].num > 0) { // 检查书籍是否有剩余副本
+                for (int j = 0; j < 100; j++) { // 假设用户数组大小为100
+                    if (strcmp(rr.reuser[j].name, "") == 0) { // 找到空的借阅者信息
+                        strcpy(rr.reuser[j].name, rent.name);
+                        strcpy(rr.reuser[j].code, rent.code); // 复制密码
+                        rr.reuser[j].genter = rent.genter; // 复制性别
+                        rr.reuser[j].age = rent.age; // 复制年龄
+                        strcpy(rr.reuser[j].grade, rent.grade); // 复制年级
+                        strcpy(rr.rebook[j].name, bbb); // 复制书名
+                        rr.rebook[j].day = day; // 记录借阅天数
+                        printf("借阅请求发送\n");
+                        return;
+                    }
+                }
+                printf("借阅者列表已满，请等待空位\n");
+            }
+            else {
+                printf("此书已被借完，请等待还书\n");
+            }
+            return;
+        }
+    }
+    printf("未找到书籍\n");
+}
+void Book_Solve_Request() {
+    int i = 0;
+    while (strcmp(rr.reuser[i].name, "") != 0 && strcmp(rr.rebook[i].name, "") != 0 && rr.rebook[i].day != 0) {
+        char oo; // 操作
+        printf("当前借阅者是：%s  借阅的书籍是：%s  借阅的时长是：%d\n", rr.reuser[i].name, rr.rebook[i].name, rr.rebook[i].day);
+        printf("是否同意当前的借阅请求(y/n)或退出（任意其他键）：");
+        while ((getchar()) != '\n'); // 清空缓冲区
+        scanf(" %c", &oo); // 读取用户输入
+        while ((getchar()) != '\n'); // 清空缓冲区
+
+        int flag = 0; // 在switch之前初始化flag变量
+        switch (oo) {
+        case 'y':
+        case 'Y': // 考虑大写'Y'
+            user uud; // 找用户
+            for (int j = 0; j < 500; j++) {
+                if (strcmp(rr.reuser[i].name, uu[j].name) == 0) {
+                    uud = uu[j];
+                    uud.jieyue++; // 更新用户借阅次数
+                    uu[j] = uud; // 更新全局用户数组
+                    break;
+                }
+            }
+            printf("%s借阅%s申请通过\n", rr.reuser[i].name, rr.rebook[i].name);
+
+            for (int j = 0; j < 500; j++) { // 寻找哪本书
+                if (strcmp(rr.rebook[i].name, bb[j].name) == 0) { // 书名
+                    bb[j].beijie++; // 被借次数
+                    bb[j].num--;
+                    for (int k = 0; k < 100; k++) {
+                        if (strcmp(bb[j].cd[k].name, "") == 0) {
+                            bb[j].cd[k] = uud; // 更新借阅者信息
+                            bb[j].days[k] = rr.rebook[i].day; // 更新借阅天数
+                            flag = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            strcpy(rr.reuser[i].name, ""); // 清空用户信息
+            strcpy(rr.reuser[i].code, ""); // 清空密码
+            rr.reuser[i].genter = ' '; // 清空性别
+            rr.reuser[i].age = 0; // 清空年龄
+            strcpy(rr.reuser[i].grade, ""); // 清空年级
+            strcpy(rr.rebook[i].name, ""); // 清空书籍信息
+            rr.rebook[i].day = 0; // 清空借阅天数
+            break;
+        case 'n':
+        case 'N': // 考虑大写'N'
+            printf("%s借阅%s申请被驳回\n", rr.reuser[i].name, rr.rebook[i].name);
+            strcpy(rr.reuser[i].name, ""); // 清空用户信息
+            strcpy(rr.reuser[i].code, ""); // 清空密码
+            rr.reuser[i].genter = ' '; // 清空性别
+            rr.reuser[i].age = 0; // 清空年龄
+            strcpy(rr.reuser[i].grade, ""); // 清空年级
+            strcpy(rr.rebook[i].name, ""); // 清空书籍信息
+            rr.rebook[i].day = 0; // 清空借阅天数
+            break;
+        default:
+            // 不返回，继续处理下一个请求
+            break;
+        }
+        i++;
+    }
+}
+
+int Find_Max_Borrowed() {// 找到最大借阅量的函数
+    int max_borrowed = 0;
+    for (int i = 0; i < 1000; i++) {
+        if (bb[i].beijie > max_borrowed) {
+            max_borrowed = bb[i].beijie;
+        }
+    }
+    return max_borrowed;
+}
+
+void Visualize_Borrowed_Books() {// 简单的数据可视化函数（以文本形式模拟借阅量柱状图）
+    int max_borrowed = Find_Max_Borrowed();
+    if (max_borrowed == 0) {
+        printf("当前没有图书借阅记录，无法进行可视化展示\n");
+        return;
+    }
+    printf("图书借阅量可视化展示（以*表示借阅量，仅展示有借阅记录的图书）：\n");
+    for (int i = 0; i < 1000; i++) {
+        if (bb[i].beijie > 0) {
+            int num_stars = bb[i].beijie;  // 简单等比例缩放，可根据实际调整比例系数50
+            printf("%s: ", bb[i].name);
+            for (int j = 0; j < num_stars; j++) {
+                printf("*");
+            }
+            printf(" (%d)\n", bb[i].beijie);
+        }
+    }
+}
+void cmp() {//图书排序 
+    for (int i = 0; i < 100 - 1; i++) {
+        for (int j = i + 1; j < 100; j++) {
+            if (bb[i].beijie < bb[j].beijie) {
+                book temp = bb[i];
+                bb[i] = bb[j];
+                bb[j] = temp;
+            }
+        }
+    }
+    printf("排序成功");
+}
+
+void Show_Most_Borrowed_Book() {//经过cmp排序后,借阅最大的为bb[0] 
+    cmp();
+    if (strcmp(bb[0].name, "") == 0) {
+        printf("当前没有图书借阅记录\n");
+        return;
+    }
+    printf("借阅量最大的图书信息如下：\n");
+    printf("书名：%s  作者：%s  借阅次数：%d\n", bb[0].name, bb[0].write, bb[0].beijie);
+}
+//在过程中遇到的界面
+// 用户主菜单函数，添加对按书柜分类展示图书新选项的处理
+void Simple_Book_Menu(user add) //主菜单(用户)；
+{
+    Simple_start_Menu();//导入界面；
+    int op;
+    printf("请输入操作：");
+    scanf("%d", &op);//选择
+    TreeNode* root = buildBinaryTree(bb, 2000);  // 构建二叉树，假设图书最多2000本
+    switch (op)
+    {
+    case 1://找书
+        Find_Book();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    case 2://借书
+        Book_Borrow_Request(add);
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    case 3://还书
+        Turn_Back(add);
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    case 4://推荐书籍
+        Recommend_Book();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    case 5://书籍导航
+        Book_Guide_Map();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    case 6://返回
+        Start_Menu();
+        break;
+    case 7:// 新增的按书柜分类展示图书选项
+
+        inorderTraversal(root, bb);  // 遍历展示书柜分类图书
+        free(root);  // 释放二叉树节点内存
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+        break;
+    default:
+        printf("请输入正确的形式！！！");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Simple_Book_Menu(add);
+    }
+}
+void Manager_Book_Menu() //主菜单(管理)；
+{
+    Manager_start_Menu();//导入界面
+    int op;
+    printf("请输入操作：");
+    scanf("%d", &op);//选择
+    switch (op)
+    {
+        int opp;
+        //int flag = 1;//判断是否返回；
+    case 1://创建用户（√）
+        Creat_User();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 2://删除用户（√）
+        Remove_User();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 3://查找用户（√）
+        Find_User();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 4://添加书籍；（√）
+        printf("输入你要添加的个数：");
+        scanf("%d", &opp);
+        while (opp--) {
+            Create_Book();//创建书籍//创建书籍
+            Flag();
+        }
+        Manager_Book_Menu();
+        break;
+    case 5://查询书籍（√）
+        Find_Book();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 6://删除书籍（√）
+        printf("输入你要删除的个数：");
+        scanf("%d", &opp);
+        while (opp--) {
+            Remove_Book();
+            while (getchar() != '\n') { /* 忽略并消耗 */ }
+            Flag();
+            //flag=Flag();//标记；
+        }
+        Manager_Book_Menu();
+        break;
+    case 7://浏览书籍
+        Bowse_Book();//浏览书籍
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 8://排序
+        cmp();//根据借阅量排序
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Manager_Book_Menu();
+    case 9:
+        Book_State();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 10:
+        // 新增选项，可视化图书借阅量
+        Visualize_Borrowed_Books();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 11://图书数据统计
+        Book_Count();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 12://借阅请求处理
+        Book_Solve_Request();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 13:// 新增选项，展示借阅量最大的图书
+        Show_Most_Borrowed_Book();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 14:// 新增选项，展示最活跃的用户
+        Show_Most_Active_User();
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+        break;
+    case 15://返回到主界面
+        Start_Menu();
+        break;
+    default:
+        printf("请输入正确的操作指令!!!\n");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Manager_Book_Menu();
+    }
+}
+void Start_Menu()//开始界面 
+{
+    strcpy(uu[0].name, "admin");
+    strcpy(uu[0].code, "123456");
+    strcpy(uu[1].name, "root");
+    strcpy(uu[1].code, "123456");
+    Start_Value_Menu();//调用开始界面
+    int op;
+    scanf("%d", &op);
+    char name[2000];
+    char code[2000];
+    int flag = 0;
+    int oop;
+    switch (op) {
+    case 1: // 用户界面登陆(√)
+        user add;
+        printf("用户名输入：");
+        scanf("%99s", add.name); // 限制输入长度
+        printf("用户密码输入：");
+        scanf("%99s", add.code); // 限制输入长度
+        for (int i = 1; i < 2000; i++) { // 假设uu数组大小为2000
+            if (strcmp(add.name, uu[i].name) == 0) {
+                if (strcmp(add.code, uu[i].code) == 0) {
+                    flag = 1;
+                    break; // 找到匹配的用户后退出循环
+                }
+            }
+        }
+        if (flag == 1) {
+            printf("欢迎登陆\n");
+            while (getchar() != '\n') { /* 忽略并消耗 */ }
+            Flag();
+            Simple_Book_Menu(add);// 下一个界面（主界面）的逻辑应该在这里或另一个函数中实现
+        }
+        else {
+            printf("用户名或密码输入错误\n");
+            printf("输入0返回上一个界面:");
+            scanf("%d", &oop);
+            if (oop == 0) {
+                while (getchar() != '\n') { /* 忽略并消耗 */ }
+                Flag();
+                Start_Menu();
+            }
+            // else 不需要break，因为这是在switch语句的case块中
+        }
+        break;
+    case 2://管理员登陆（√）
+        printf("管理员账号输入：");
+        scanf("%99s", name); // 限制输入长度
+        printf("管理员密码输入：");
+        scanf("%99s", code); // 限制输入长度
+        if (strcmp(name, uu[0].name) == 0) {
+            if (strcmp(code, uu[0].code) == 0) {
+                flag = 1;
+            }
+        }
+        if (flag == 1) {
+            printf("欢迎登陆\n");
+            while (getchar() != '\n') { /* 忽略并消耗 */ }
+            Flag();
+            Manager_Book_Menu();
+        }
+        else {
+            printf("用户名或密码输入错误\n");
+            printf("输入0返回上一个界面");
+            scanf("%d", &oop);
+            if (oop == 0) {
+                while (getchar() != '\n') { /* 忽略并消耗 */ }
+                Flag();
+                Start_Menu();
+            }
+        }
+        break;
+    case 3://退出（√）
+        break;
+    default://（√）
+        printf("请输入正确的数字!!!!\n");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Start_Menu();
+    }
+}
+void Book_Guide_Map() //导航的主界面
+{
+    int x;
+    int op;
+    Book_start_Guide();
+    printf("请输入你要选择的操作数:");
+    scanf("%d", &op);
+    switch (op)
+    {
+    case 1://根据id（书柜）查询
+        printf("请输入要查询的书柜序号：");
+        scanf("%d", &x);
+        printf("从0号点到%d号点的最短距离是：%d，路径为：", x, dist[x + 1]);
+        Book_printPath(x);
+        printf("\n");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Book_Guide_Map();
+    case 2:
+        printf("请输入要查询的图书名称：");
+        char a[100];
+        scanf("%s", a);
+        for (int i = 0; i < 1000; i++)
+        {
+            if (strcmp(a, bb[i].name) == 0)
+            {
+                x = bb[i].op;
+                printf("要查询的书在%d书柜上\n", x);
+                printf("从0号到%d号点的最短距离是：%d，路径为：", x, dist[x + 1]);
+                Book_printPath(x);
+                printf("\n");
+                while (getchar() != '\n') { /* 忽略并消耗 */ }
+                Flag();
+                Book_Guide_Map();
+                return;
+            }
+        }
+        printf("查询失败！");
+        printf("\n");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Book_Guide_Map();
+        break;
+    case 3:
+        return;
+    default:
+        printf("请输入正确的操作数!!!!\n");
+        while (getchar() != '\n') { /* 忽略并消耗 */ }
+        Flag();
+        Book_Guide_Map();
+    }
+}
+
+//user的方法类
+void Creat_User() {
+    user add;
+    char a[100];
+    printf("创建一个用户\n");
+    printf("输入账号：");
+    scanf("%99s", add.name);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入密码：");
+    scanf("%99s", add.code);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("确认输入密码：");
+    scanf("%99s", a);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入性别：");
+    scanf(" %c", &add.genter);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入年龄：");
+    scanf("%d", &add.age);
+    while (getchar() != '\n') { /* 忽略并消耗 */ }
+    printf("输入学号：");
+    scanf("%99s", add.grade);
+    if (strcmp(add.code, a))
+    {
+        printf("两次输入的密码不匹配");
+        return;
+    }
+    while (getchar() != '\n') { /* 忽略并消耗 */
+        for (int i = 1; i < 2000; i++)
+        {
+            if (strcmp(uu[i].name, add.name) == 0)
+            {
+                printf("当前账号已存在，请联系管理员查询密码");
+                return;
+            }
+        }
+        for (int i = 1; i < 2000; i++) {
+            if (strcmp(uu[i].name, "") == 0) { // 假设空字符串表示空位
+                strcpy(uu[i].name, add.name);
+                strcpy(uu[i].code, add.code);
+                uu[i].genter = add.genter;
+                uu[i].age = add.age;
+                strcpy(uu[i].grade, add.grade);
+                printf("创建成功\n");
+                return; // 成功后立即返回
+            }
+        }
+    }
+}
+void Remove_User()
+{
+    char c[100];
+    printf("输入要删除的账户：");
+    scanf("%s", c);
+    for (int i = 1; i < 2000; i++)
+    {
+        if (strcmp(c, uu[i].name) == 0) {
+            strcpy(uu[i].name, "");
+            strcpy(uu[i].code, "");
+            uu[i].age = 0;
+            uu[i].genter = ' ';
+            strcpy(uu[i].grade, "");
+            printf("删除成功\n");
+            return;
+        }
+    }
+    printf("删除失败\n");
+}
+void Find_User()
+{
+    char c[100];
+    printf("输入要查询的用户：");
+    scanf("%s", c);
+    for (int i = 1; i < 2000; i++)
+    {
+        if (strcmp(c, uu[i].name) == 0) {
+            printf("用户名为: %s 用户密码为: %s 用户性别：%c 用户年龄：%d 用户学号：%s\n", uu[i].name, uu[i].code, uu[i].genter, uu[i].age, uu[i].grade);
+            printf("查询成功\n");
+            return;
+        }
+    }
+    printf("查询失败\n");
+}
+int compare_active_user(const void* a, const void* b) {//用户借阅的比较 
+    active_user* ua = (active_user*)a;
+    active_user* ub = (active_user*)b;
+    return ub->borrow_count - ua->borrow_count;
+}
+void Show_Most_Active_User() {
+    int user_count = 0;
+    for (int i = 0; i < 2000; i++) {
+        if (strcmp(uu[i].name, "") != 0) {
+            user_count++;
+        }
+    }
+    if (user_count == 0) {
+        printf("当前没有用户信息\n");
+        return;
+    }
+    active_user active_users[2000];
+    // 统计每个用户的借阅次数，直接使用jieyue字段
+    for (int i = 0; i < 2000; i++) {
+        if (strcmp(uu[i].name, "") != 0) {
+            active_users[i].u = uu[i];
+            active_users[i].borrow_count = uu[i].jieyue;
+        }
+    }
+    // 按照借阅次数排序
+    qsort(active_users, user_count, sizeof(active_user), compare_active_user);
+    printf("最活跃的用户信息如下：\n");
+    printf("用户名：%s  密码：%s  性别：%c  年龄：%d  年级：%s  借阅次数：%d\n",
+        active_users[0].u.name, active_users[0].u.code, active_users[0].u.genter,
+        active_users[0].u.age, active_users[0].u.grade, active_users[0].borrow_count);
+}
+//主实现类
+void solve()//实现方法； 
+{
+    //Start_Manu();
+    //Creat_User();
+    //Remove_User();
+    //Find_User();
+    Start_Menu();
+
+    //Creat_User();
+    //Book_Guide_Map();
+}
+int main()
+{
+    inti();
+    bookadd();
+    solve();
+}
